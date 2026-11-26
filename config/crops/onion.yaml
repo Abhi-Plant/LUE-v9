@@ -1,0 +1,126 @@
+# Crop file: every crop-specific value of the framework. One file per crop (config/crops/<crop>.yaml); the run config
+# names its crop (crop: onion). config/project.yaml holds method settings only and is the same for every crop.
+# Values and sources: "241126- Onion LUE v5 framework - method, equations, sources and inputs", section 6.
+#
+# Every value carries a source (citation with page / table / equation) and a status:
+#   verified       value seen on the printed page of the source (PDF in references/ or official online document)
+#   verified_range the range is verified; the central value inside it is a framework choice
+#   adapted        a published value used outside the purpose it was published for (reason in the source text)
+#   not_verified   cited source not available - value not checked
+#   setting        framework choice, no literature value
+# core/config.py stops when an entry has no source or no valid status (nothing is used without a stated basis).
+
+crop:
+  name: onion
+  map_class: Onion                    # class name of the crop map (step 01 data QC: crop == 'Onion')
+  harvested_part: bulb
+  season_end_event: maturity (neck fall)   # Kale et al. 2022 p.17: harvest when > 50-70 % of the tops are down
+  photosynthetic_pathway: C3
+
+# LUE parameters (ensemble values, equal weights). f (PAR fraction of Rs) is not crop-specific: config/project.yaml.
+parameters:
+  eps_max:
+    central: 3.3
+    values: [3.0, 3.3, 3.6]
+    range: [3.0, 3.6]
+    unit: "g dry matter per MJ absorbed PAR"
+    source: "Brewster, Mondal & Morris 1986, Ann Bot 58:221-233, abstract p.221: 'The mean efficiency of conversion of
+      intercepted radiation to dry-matter was 1.58 g MJ-1', radiation = total solar radiation intercepted by the leaf
+      canopy (authors at the National Vegetable Research Station, Wellesbourne, UK; site not stated in the abstract).
+      1.58 / 0.48 (PAR share, Jaafar & Mourad 2021 eq. 5 p.4) = 3.29 g per MJ intercepted PAR, used per MJ absorbed
+      PAR (unit conversion). Full text paywalled; abstract read on the publisher and AGRIS pages. Spread +-10 %: no
+      literature value (setting)"
+    status: adapted
+  topt:                               # used only with config temperature_scalar.topt: crop_values (default: CASA)
+    central: 20.5
+    values: [16.0, 20.5, 25.0]
+    range: [16.0, 25.0]
+    unit: degC
+    source: "Kale et al. 2022 (ICAR-DOGR / MANAGE) p.9: 'The optimum temperature for vegetative phase and bulb
+      development is 13-24 degC and 16-25 degC, respectively'. Central = midpoint. Used only if
+      temperature_scalar.topt = crop_values; v5 default is the CASA rule (Potter et al. 1993 p.816)"
+    status: verified_range
+  hi:
+    central: 0.84
+    values: [0.78, 0.84, 0.90]
+    range: [0.78, 0.90]
+    unit: "kg bulb DM per kg total DM"
+    source: "Kale et al. 2022 Table 1 p.29: cv. Bhima Kiran, leaves 708.9 + bulbs 3604.2 = 4313.1 kg DM/ha, harvest
+      index 83.6 % (one cultivar, ICAR-DOGR). Spread +-0.06: no literature value (setting)"
+    status: verified
+  dm:
+    central: 0.115
+    values: [0.08, 0.115, 0.15]
+    range: [0.08, 0.15]
+    unit: "kg DM per kg fresh bulb"
+    source: "Kale et al. 2022: 3604.2 kg bulb DM for 45 t/ha fresh bulbs = 0.080 (cv. Bhima Kiran, Table 1 p.29);
+      NHRDF Red-2 dry matter 14-15 % (p.25). Central = midpoint"
+    status: verified_range
+
+# Crop coefficient - used only by the reported 'relative_et' alternative and the ETa/ETc diagnostic, never by LUE-ENS.
+# Kc = Kc_ini + (Kc_mid - Kc_ini) * Kd ; Kd = min(1, ML fc, fc^(1/(1+h))) ; fc = ((NDVI - NDVI_soil)/(NDVI_full - NDVI_soil))^2
+crop_coefficient:
+  kc_ini:
+    value: 0.70
+    source: "FAO-56 Table 12, group 'a. Small Vegetables' (onions belong to it): group Kc ini 0.7. The per-crop Kc ini
+      column of the online edition is an image; the group value is text"
+    status: verified
+  kc_mid:
+    value: 1.05
+    source: "FAO-56 Table 12, Onions - dry: Kc mid 1.05 (Kc end 0.75 not used)"
+    status: verified
+  crop_height_m:
+    value: 0.4
+    source: "FAO-56 Table 12, Onions - dry: maximum crop height 0.4 m"
+    status: verified
+  ml:
+    value: 2.0
+    source: "FAO-56 eq. 98 (ch. 9; form in Example 41): Kcb = Kc min + (Kcb full - Kc min) min[1, 2 fc, fc eff^(1/(1+h))],
+      i.e. ML = 2. Eq. 98 runs from Kc min to Kcb full; the framework applies it from Kc ini to Kc mid (adapted use)"
+    status: adapted
+  ndvi_soil:
+    value: 0.125
+    source: "Jaafar & Mourad 2021 eq. 4, p.4: 'an NDVI value of 0.125 indicates bare soil'"
+    status: verified
+  ndvi_full:
+    value: 0.85
+    source: "above the onion canopy NDVI maximum of the Dewas tehsil series (0.54-0.64, onion v3 run); to be reset
+      from the field NDVI"
+    status: setting
+
+# Season detection from NDVI (step 03)
+season:
+  min_amplitude:
+    value: 0.15
+    source: "NDVI peak minus minimum needed for a crop cycle; onion tehsil amplitude 0.19-0.37 (onion v3 run)"
+    status: setting
+
+# Heat-day flag (step 04): a flag only, no yield effect
+heat_stress:
+  tmax_threshold_c:
+    value: 25.0
+    source: "upper end of the bulb-development optimum 16-25 degC (Kale et al. 2022 p.9). The source gives an optimum
+      range of air temperature, not a daily-maximum threshold"
+    status: adapted
+  bulking_start_days_after_emergence:
+    value: 60
+    source: "'bulb development stages (60-110 days after transplanting)' (Kale et al. 2022 p.34); counted from the NDVI
+      establishment date, not from transplanting"
+    status: adapted
+
+# Yield conversion basis
+yield_basis:
+  biomass: "dry matter of leaves and bulbs (Kale et al. 2022 Table 1 p.29; roots not listed). Brewster et al. 1986
+    relate efficiency to 'dry-matter' (abstract); whether roots are included is not stated in the abstract"
+  harvest_index: "bulb dry matter / (leaf + bulb) dry matter (Kale et al. 2022 Table 1 p.29)"
+  fresh_dm: "bulb dry-matter fraction of fresh bulbs (Kale et al. 2022 Table 1 p.29; p.25)"
+
+# Crop-specific references (method references: config/project.yaml)
+references:
+  - "Brewster J.L., Mondal F.M., Morris G.E.L. (1986) Bulb development in onion (Allium cepa L.) IV. Influence on yield of radiation interception, its efficiency of conversion, the duration of growth and dry-matter partitioning. Ann Bot 58(2):221-233. doi:10.1093/oxfordjournals.aob.a087200 (abstract only)."
+  - "Kale R.B., Gadge S.S., Venkata Rao B., Mahajan V., Singh M. (eds) (2022) Good Agricultural Practices in Onion and Garlic Production. ICAR-DOGR Pune and MANAGE Hyderabad."
+  - "Jaafar H., Mourad R. (2021) GYMEE. Remote Sens 13:773 (eqs. 4, 5, p.4)."
+  - "Allen R.G. et al. (1998) FAO Irrigation and Drainage Paper 56, Table 12 (onion Kc, height) and eq. 98."
+
+# Calibration input expected for this crop (step 08)
+calibration_expected: {crop: onion, yield_basis: fresh, units: t/ha}

@@ -1,0 +1,4 @@
+# Data and run records are stored byte for byte (no line-ending conversion): their sha256 is registered in the run
+# configs and manifests and must be the same on every system.
+data/** -text
+outputs/** -text

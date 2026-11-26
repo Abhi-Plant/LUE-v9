@@ -1,0 +1,453 @@
+# LUE crop yield framework - method settings, the same for every crop and run. Crop values: config/crops/<crop>.yaml;
+# runs (district x crop x season): config/aoi/<run>.yaml. Method document: references/LUE_Potato_Yield_Methodology_
+# method_document.pdf. Every value is traceable to a cited source (equation, page) or marked as a setting.
+framework:
+  name: LUE_Yield_Framework
+  version: 0.9.0
+  method_document: "references/LUE_Potato_Yield_Methodology_method_document.pdf"
+  core_equation: "dry yield = HI * sum_days[ eps_max * Ts * Ws * fAPAR * f * Rs ], emergence -> season end; fresh = dry / DM"
+  changes_0_2: "units (tehsil | field), combined ensemble LUE-ENS with variance shares, relative-ET water scalar,
+    Sobol sensitivity, tier-0 calibration, heat-stress flag, field sample for the field exports"
+  changes_0_2_1: "review 2026-11-13: unusable field units excluded with design weights re-distributed in the cell;
+    one-sensor Landsat fallback; calibration folder only marked current when complete, code version in its id;
+    district bias target tested with observed tehsil yields; production also on the official area; limitations sheet"
+  changes_0_3: "16-day tehsil table replaces the monthly table; daily drivers by curve fitting - fAPAR double logistic
+    fitted to the 16-day means (Beck et al. 2006), Landsat EF and ETa/ETc smoothing splines (noise-based smoothing);
+    daily weather scaled / shifted to the 16-day means; daily biomass and cumulative biomass curve. Everything else as v0.2.1"
+  changes_0_3_1: "final review 2026-11-18: biomass by curve fitting of the 16-day growth rate (approach 2) is the central
+    method; unused monthly code removed; step 10 validation checks added"
+  changes_0_3_2: "expert audit 2026-11-19: (1) potato area = crop-map polygon area (area_ha of the classified parcels),
+    not the undocumented 16-day-table area statistic (1.20-1.35 x larger); (2) LUE-ENS uses the water scalar prescribed
+    by the method document only (Ws = EF); the ETa/ETc form depends on assumed values (NDVI soil/full, ML) and on the
+    same EF signal, and is reported as an alternative; (3) audit diagnostics added to step 10; documentation corrected"
+  changes_0_3_3: "code audit 2026-11-20: step 10 checks the calibration that ran (placeholder or observed); season end
+    found only if NDVI fell by min_amplitude after the peak (else window end, flagged); field units: Landsat overpasses
+    below the clear-share minimum dropped, yield per hectare by the separate ratio estimator (Cochran 1977); Landsat
+    8 / 9 choice reported per tehsil; workbook texts and flag thresholds from the config; unused keys removed"
+  changes_0_4_0: "production layers 2026-11-20: provenance and sha256 of every input; data QC of the crop map (geometry,
+    overlaps, class, area, sources, ID reuse), dates, clear-sky fractions, sensor coverage and units; SL2P fAPAR used
+    when delivered; optional energy-balance components with closure checks; ERA5-Land grid alignment; censoring flags
+    and observed crop calendar; leave-one-period-out hold-out of the growth fit; biomass and HI basis; field sample as
+    a stratified simple random sample with inclusion probabilities; two defined R2; uncertainty-source table; pinned
+    requirements, unit tests, CI, run time and memory in the manifests"
+  changes_0_4: "2026-11-19: data access through STAC APIs, no Google Earth Engine. New step 00 (00_stac_ingest.py,
+    core/stac_ingest.py) makes the field exports E1-E3 of the step-02 sample: Sentinel-2 L2A and Landsat 8/9 C2 L2
+    from the Planetary Computer STAC API, ERA5-Land from the Climate Data Store (STAC catalogue), elevation from the
+    NASADEM STAC collection. The GEE export script and the GEE upload shapefile of step 02 are removed; units: field.
+    No equation, parameter value or model step changed (steps 03-10 and core/ model code identical to v0.3.2)"
+  changes_0_4_1: "2026-11-20: the input stage is four ordered steps - 00a input parameters (00a_parameters.py),
+    00b units from an area polygon when there is no crop map (00b_units.py), 00c data download (00c_download.py,
+    the former 00_stac_ingest.py), 00d verification of the downloads (00d_verify.py, core/stac_verify.py);
+    run.py runs them in order. No equation, parameter value or model step changed"
+  changes_0_5_0: "2026-11-23: crop values in config/crops/<crop>.yaml with source and status per value (checked when a
+    run loads); generic crop names in code and outputs (season_end, cell_crop_ha); comparison model optional;
+    Sentinel-2 offsets read from each product's metadata; Landsat cirrus and snow masked; SEBAL EF function
+    (core/ef_sebal.py) with homogeneous anchors, anchor sensitivity, terrain range and Rn, G, H, LE in E2; Ws = EF
+    sourced to Bastiaanssen & Ali 2003 eq. 7 and Yuan et al. 2007 eq. 5; fAPAR relation sourced to Bastiaanssen &
+    Ali 2003 eq. 4; v0.3.3 / v0.4.0 corrections carried over (provenance, data QC, separate ratio estimator,
+    inclusion probabilities, censoring flags, hold-out, tests, CI)"
+  changes_0_6_0: "2026-11-25: storage of step 00c. Every satellite and weather dataset is stored as GeoTIFF and every
+    export value is computed from the stored files: Sentinel-2 B04, B08, SCL per granule (digital numbers, pixel
+    windows of the units), the Landsat bands that are read per scene (scene window), hourly ERA5-Land per month and
+    variable (the netCDF of the Climate Data Store converted and compared value by value), NASADEM of the cells. The
+    preprocessing results are GeoTIFFs too: clear mask, red and NIR reflectance and NDVI per Sentinel-2 date; clear
+    mask, EF and ETa per Landsat scene; daily weather with Tmean and FAO-56 ETo. New step 00e (00e_maps.py,
+    core/quicklook.py): a JPG map of every GeoTIFF. Step 00d checks the stored files (sha256, pixel samples against
+    the source). The .npz granule files of v0.5.0 are no longer written or read. No equation, parameter value or
+    model step changed (steps 01-10 and the SEBAL equations as in v0.5.0)"
+  changes_0_7_0: "2026-11-25: raster chain to a spatial yield product. Step 00c stores and preprocesses the
+    Sentinel-2 pixels of every parcel of the crop map (stac.sentinel2.coverage) and keeps only the results of each
+    Landsat scene (clear mask, EF, ETa rasters; stac.landsat.keep_source_bands). New step 11 (11_parcel_map.py): the
+    field-unit model of steps 01-05 for every parcel, its values read from the stored rasters, calibrated with the
+    member factors of step 08 -> parcel_yield.gpkg, yield GeoTIFF on the 10 m grid, tehsil and district totals, checks
+    against the sample. The field-unit code of steps 01, 03, 04 moved to core (drivers.field_tables, field_drivers;
+    season.unit_seasons) and is shared with step 11. No equation, parameter value or model step changed"
+  changes_0_8_0: "2026-11-26: the yield model runs at pixel level, then aggregates. Step 00c export px stores the
+    pixel stacks of every crop-map pixel (10 m Sentinel-2 pixel with its centre inside a parcel): NDVI per date and
+    Landsat EF / ETa per overpass at the pixel centre, read from the rasters it already stores (section pixels);
+    step 00d verifies them against the rasters. New step 05b (05b_pixel_model.py, core/pixels.py): the model of
+    steps 03-05 for every pixel (vectorised; checked against the field-unit code on a sample of pixels), then pixel
+    -> parcel (mean of its pixels) -> cell, tehsil, district (crop-area-weighted, members first). Steps 08 and 09
+    calibrate and report the pixel-based tehsil and district values; the field sample (steps 01-07) stays for the
+    Sobol analysis, the variance shares, the design-based district estimate with its sampling error and the
+    checks. Step 11 (11_pixel_map.py) writes the pixel yield GeoTIFF and the parcel yields. No equation or
+    parameter value changed"
+  changes_0_9_0: "2026-11-26: (1) Landsat values of a pixel: export px stores per overpass the EF, ETa and clear
+    share of the 10 m pixel SQUARE by the rules of the field export E2 (stac_ingest.landsat_rows, overpass_rows):
+    area-weighted over the clear 30 m Landsat pixels the square overlaps (one, two or four), clear share = clear
+    area / area in the scene, overpass = mean of its scenes and the largest clear share (new stack
+    landsat_clear.npy, pixels.clear_scale). Step 05b drops an overpass with a clear share below
+    ef.min_valid_fraction, as for field units (v0.8.0: value of the one 30 m pixel holding the pixel centre, no
+    clear share). Step 00d checks a sample of squares against the E2 field code. Stacks of v0.8.0 are refused: run
+    step 00c --only px (no download). (2) New step 12 (12_parcel_map.py): the field-unit model of steps 01-05 for
+    every parcel of the crop map on its area-weighted mean inputs (parcel polygon as the unit, as the field sample),
+    values read from the stored rasters, calibrated with the member factors of step 08; next to every parcel the
+    pixel-based parcel yield of step 11 and the difference. The parcel-mean map is the product to compare with
+    plot / parcel yields (crop cutting); the final tehsil and district values stay those of the pixel yield model
+    (step 09). No equation or parameter value changed"
+
+# Provenance (step 01): fields every input of the run config must document (config/aoi/<run>.yaml provenance)
+provenance:
+  required_fields: [producer, script, collections, asset_ids, date_range, band_scaling, qa_rules, spatial_reduction,
+                    export_parameters]
+  undocumented_value: "not documented"
+
+# Data QC (step 01) - processing settings, no literature values
+data_qc:
+  overlap_tolerance_m2: 1.0                  # crop-map polygon pairs overlapping by more than this are reported
+  known_sources: [parcel, mixed_parcel_segment, mixed_parcel_edge, unparcelled_cropland]
+  max_s2_gap_days: 20                        # longest gap between clear S2 dates in the season window (WARN above)
+  ranges:                                    # physical ranges (FAIL outside)
+    ndvi: [-1.0, 1.0]
+    fapar: [0.0, 1.0]
+    ef: [0.0, 1.0]
+    eta_mm_day: [0.0, 15.0]
+    rs_mj_m2: [0.0, 40.0]
+    t_c: [-10.0, 50.0]
+    valid_fraction: [0.0, 1.0]
+  # Plausibility limits of the QC checks (steps 00c, 00d, 01) - SETTINGS, not literature values; they flag data,
+  # they never change a value used by the model.
+  e3_ranges: {rs_mj_m2: [0, 35], tmin_c: [-5, 35], tmax_c: [0, 50], tdew_c: [-30, 35], u10_ms: [0, 20],
+              sp_kpa: [80, 105], precip_mm: [0, 500]}                     # daily weather per cell (FAIL outside)
+  period_ranges: {fapar: [0, 1], ef_l8: [0, 1], ef_l9: [0, 1], rs: [5, 35], tmax: [0, 50], tmin: [-5, 35],
+                  eta_l8: [0, 10], eta_l9: [0, 10]}                        # 16-day tehsil table (tehsil units)
+  area_attribute_tolerance: 0.001            # crop map: |sum(area_ha attribute) / sum(polygon area) - 1|
+  official_area_tolerance: 0.25              # crop-map area vs official area (WARN above; production only)
+  daily_rs_vs_table_max_rel: 0.10            # tehsil units: daily Rs vs the 16-day table (WARN above)
+  daily_tmean_vs_table_max_c: 2.0            # tehsil units: daily Tmean vs the 16-day table (WARN above)
+  zero_rule: "only EF and ETa of exactly 0 are no-data (curve_fit.zero_as_missing); every other 0 is a valid value"
+
+# Step 00d: accepted |export - recomputation from the source| (second-method check) - settings
+verification_tolerance: {ndvi: 0.01, valid_fraction: 0.02, weather: 0.001}
+
+# Energy balance (field units, optional E2 columns le_w_m2, rn_w_m2, g_w_m2, h_w_m2 at the overpass): closure checks
+energy_balance:
+  ef_tolerance: 0.01                         # |ef - LE / (Rn - G)| (WARN above); processing setting
+  closure_tolerance_w_m2: 5.0                # |Rn - G - H - LE| (WARN above); processing setting
+
+# ERA5-Land grid (step 02 checks that cell centres are grid points)
+era5_land_grid: {step_deg: 0.1, origin_deg: 0.0}   # regular 0.1 deg latitude-longitude grid, points at multiples of 0.1
+
+# Uncertainty sources and how each is handled (step 09 sheet 'uncertainty_sources')
+uncertainty_sources:
+  - {source: "eps_max, f, Topt, HI, DM", handling: "LUE-ENS members (documented values, equal weights)"}
+  - {source: "phenology (season threshold)", handling: "LUE-ENS members 0.10 / 0.20 / 0.30; Sobol 0.10-0.30"}
+  - {source: "Landsat 8 / 9 EF", handling: "reported per tehsil (L8 only / L9 only); Sobol mix 0-1"}
+  - {source: "growth-curve fit", handling: "leave-one-period-out hold-out (step 04)"}
+  - {source: "field sampling", handling: "sampling standard error (field units)"}
+  - {source: "crop-mask area", handling: "not quantified - map accuracy assessment needed; affects production only"}
+  - {source: "fAPAR retrieval", handling: "not quantified - needs SL2P uncertainty or field fAPAR"}
+  - {source: "EF retrieval", handling: "not quantified - needs energy-balance uncertainty (optional E2 column ef_sd)"}
+  - {source: "weather (ERA5-Land)", handling: "not quantified - needs station comparison"}
+
+# Run units. field: per-field exports E1-E3 of the step-02 sample, made by step 00c from STAC APIs; design-weighted
+# aggregation. tehsil: code unchanged from v0.3.2; it needs a 16-day tehsil table + per-date tehsil NDVI + daily
+# weather workbook, which step 00c does not make (run config inputs).
+units: field
+
+# Season dates (window, peak_search, quality_window) are set per run in config/aoi/<district>_<season>.yaml.
+season:
+  lead_days: 30                              # processing setting (no literature value): NDVI starts this many days before the window
+  amplitude_fraction: 0.20                   # central: NDVI crossing base + 20 % of amplitude (TIMESAT-type thresholds, Jonsson &
+                                             # Eklundh 2004 - paper not checked); 0.20 is a processing setting, 0.10-0.30 in LUE-ENS
+  ensemble_fractions: [0.10, 0.20, 0.30]     # season-timing members of LUE-ENS
+  sobol_range: [0.10, 0.30]                  # continuous range for the Sobol analysis (grid step 0.01)
+
+# NDVI cleaning: processing settings chosen for this framework (no literature values); they affect season dates only.
+ndvi_cleaning:
+  min_valid_fraction: 0.5                    # share of the unit's pixels clear on that date
+  despike_drop: 0.10                         # drop a date >0.10 below the mean of both neighbours and below both (fog, haze)
+  despike_max_span_days: 20                  # ... only if those neighbours are <= 20 d apart (a real trough lasts longer)
+  savgol_window_days: 31                     # Savitzky-Golay smoothing of the daily series (method: Chen et al. 2004; window: setting)
+  savgol_order: 2
+  min_used_obs: 6                            # a unit needs >= 6 clear dates in the window (else excluded / tehsil: stop)
+
+fapar:
+  relation: fitted_on_input                  # refit on the 16-day table (input fAPAR is an NDVI function); used by the
+                                             # alternative 'fAPAR from per-date NDVI' (v0.2.1 path) in step 07
+  relation_field_units: bastiaanssen_ali_2003   # field units without an SL2P fAPAR column in E1
+  bastiaanssen_ali_2003: {slope: 1.257, intercept: -0.161}   # f = -0.161 + 1.257 NDVI: Bastiaanssen & Ali 2003 eq. 4,
+                                             # p.323 (from experimental data of Daughtry et al. 1992, Joel et al. 1997,
+                                             # Myneni et al. 1997; f = 0-1 for NDVI 0.13-0.92, p.327); also Jaafar &
+                                             # Mourad 2021 eq. 4. The method document prescribes the Sentinel-2 SNAP
+                                             # biophysical processor (SL2P): used when E1 carries fapar_sl2p
+  min_r2: 0.98
+
+ef:                                          # Landsat 8 and 9 are mixed with equal weight (Sobol varies the mix 0-1;
+                                             # L8-only / L9-only per tehsil reported in steps 07 and 09)
+  min_valid_fraction: 0.5                    # field units: overpasses with a smaller clear share of the field are dropped
+                                             # (processing setting, same value as ndvi_cleaning.min_valid_fraction)
+
+weather:
+  rs_adjust: ratio                           # tehsil units: daily series scaled / shifted to the 16-day table means
+  tmean_adjust: delta
+  tmax_adjust: delta
+
+# v0.3: how the daily values that are summed to biomass are obtained from the 16-day table
+#   fit_biomass (central, approach 2): growth rate per 16-day period -> double-logistic curve -> read daily -> sum
+#   fit_drivers (approach 1, reported in step 07): fAPAR / EF / ETa curves daily -> daily growth -> sum
+biomass_method: fit_biomass                  # tehsil units; field units always use fit_drivers (per-date data, method document)
+curve_fit:
+  fapar:
+    method: double_logistic                  # Beck et al. (2006); fitted to the period MEANS (curve averaged over each period)
+    source: "Beck P.S.A. et al. (2006) Remote Sens Environ 100: 321-334; double-logistic seasonal model as in TIMESAT (Jonsson & Eklundh 2004)"
+  ef_eta:
+    method: smoothing_spline                 # cubic smoothing spline at period mid-dates (Reinsch 1967)
+    smoothing: noise_discrepancy             # least smoothing whose residual RMSE reaches the sensor noise (Morozov 1966)
+    noise: landsat_8_9_difference            # sigma = sd(L8 - L9 of the same period) / sqrt(2), pooled over tehsils
+    min_obs: 5                               # fewer values -> linear interpolation (flagged)
+    source: "Reinsch C.H. (1967) Numer Math 10: 177-183; Morozov V.A. (1966) Soviet Math Dokl 7: 414-417"
+  biomass:                                   # approach 2 (central, biomass_method: fit_biomass)
+    method: double_logistic                  # growth rate of every 16-day period fitted by a double logistic (period-mean fit)
+    rate: "r_p = Ts(Tmean_p) * Ws_p * fAPAR_p * Rs_p ; daily growth = eps_max * f * r(t) ; biomass = sum of the days"
+    landsat_gap_fill: "missing sensor -> other sensor of the period; both missing -> linear in time"
+    vmax_hi: 2.0                             # upper bound of vmax relative to the largest period rate
+    topt_step: 0.25                          # fit grid for Sobol / one-at-a-time (Topt range of parameters.topt)
+    mix_step: 0.1                            # Landsat 8 / 9 mix 0-1
+  zero_as_missing: [ef, eta]                 # an EF or ETa of exactly 0 is a no-data value of the export
+  ef_bounds: [0, 1]
+  ret_bounds: [0, 1.5]
+
+# Water scalar in LUE-ENS: the form prescribed by the method document only (v0.3.2).
+water_stress:
+  forms:
+    ef:          {weight: 1, equation: "Ws = EF = lambdaE / (Rn - G) at the Landsat overpass, 0-1, interpolated daily between clear dates", source: "Bastiaanssen & Ali 2003 eq. 7, p.324 (W = Lambda = lambdaE / (Rn - G0), in eps = eps' T1 T2 W, eq. 6; same equation for wheat, rice, cotton, sugarcane); Yuan et al. 2007 (EC-LUE) eq. 5, p.192 (Ws = EF = LE / (LE + H), 0-1); method document p.2 (Ws: EF from Landsat thermal, SEBAL or METRIC, interpolated between clear dates); EF definition Allen et al. 2007 p.392. Ws is an LUE down-regulation scalar, not the FAO-56 soil-water stress coefficient Ks (FAO-56 eqs. 80-84 need a root-zone water balance)"}
+  status: "single form, same equation for every crop (no crop parameter)"
+  reported_alternatives:                     # reported in step 07 next to LUE-ENS, never in its mean
+    relative_et: "Ws = 0.5 + 0.5 min(1, ETa/ETc) (Potter et al. 1993 eq. 8) - not in LUE-ENS since v0.3.2: ETc needs the assumed NDVI_soil, NDVI_full and ML values below, and the table ETa is ~0.91 EF Rn/lambda (same EF signal)"
+    casa_ef: "Ws = 0.5 + 0.5 EF"
+    no_water_stress: "Ws = 1 (upper bound)"
+
+# SEBAL evaporative fraction of every Landsat 8/9 scene (core/ef_sebal.py, called by step 00c for E2). Equation numbers:
+# Allen, Tasumi & Trezza 2007, J Irrig Drain Eng 133(4): 380-394 (references/), which documents the SEBAL energy balance
+# (Bastiaanssen 1995; Bastiaanssen et al. 1998; Bastiaanssen 2000); daily net radiation: FAO-56 (Allen et al. 1998).
+sebal:
+  kt: 1.0                                    # turbidity coefficient of eq. 4: 1.0 clean air, 0.5 extremely turbid (p. 382)
+  savi_l: 0.5                                # L of SAVI eq. 19: "often set to L = 0.5" (Huete 1988, p. 384); METRIC USA 0.1
+  emissivity_air: {a: 1.08, b: 0.265}        # eq. 25, original SEBAL coefficients (Bastiaanssen 1995, as given by Allen et al.
+                                             # 2007); METRIC: a 0.85, b 0.09
+  z0m_lai: 0.018                             # eq. 33: z0m = 0.018 LAI (Tasumi 2003), agricultural crops shorter than ~1 m
+  z0m_min: 0.005                             # eq. 33: minimum, roughness of bare agricultural soil (m)
+  blending_height_m: 200                     # eqs. 31-32: blending height of the wind speed
+  z1_m: 0.1                                  # eq. 30: heights of the dT end points above the zero-plane displacement
+  z2_m: 2.0
+  wind_height_m: 10                          # zx of eq. 32: ERA5-Land 10 m wind
+  z0m_weather_m: 0.01476                     # zomw of eq. 32: SETTING - the gridded wind is taken as wind over a reference
+                                             # grass surface: z_om = 0.123 h, h = 0.12 m (FAO-56 ch. 2, Box 4 and the
+                                             # reference crop definition); ET is relatively insensitive to roughness
+                                             # (Allen et al. 2007 p. 386, citing Tasumi et al. 2005b)
+  cp_j_kg_k: 1013                            # specific heat of air: 1.013e-3 MJ kg-1 degC-1 (FAO-56 eq. 8 variable list)
+  lambda_mj_kg: 2.45                         # latent heat of vaporization for daily ETa (FAO-56 eq. 8 variable list)
+  anchors:                                   # hot / cold pixel of each scene - PROCESSING SETTINGS, NOT literature values
+    # Conditions from the paper: cold pixel = well-vegetated field (or water body) with H = 0; hot pixel = dry field
+    # with LE = 0 (Allen et al. 2007 p. 387); selection "highly reliant on the operator" (p. 393).
+    cold_ndvi_quantile: 0.95                 # cold candidates: land pixels with NDVI >= this quantile of the window ...
+    cold_ts_quantile: 0.20                   # ... and Ts <= this quantile of those
+    hot_ndvi_max: 0.13                       # hot candidates: bare soil, 0 < NDVI < 0.13 - "The soil is assumed to be bare
+                                             # when NDVI < 0.13" (Bastiaanssen & Ali 2003 p.327; Jaafar & Mourad 2021
+                                             # p.4: 0.125); hot pixel = dry bare field, LE = 0 (Allen et al. 2007 p.387)
+    hot_ts_quantile: 0.80                    # ... and Ts (datum) >= this quantile of those (setting)
+    homogeneity_window: 3                    # among the candidates: the most uniform Ts in a 3 x 3 neighbourhood whose 9
+                                             # pixels are all clear (null: the candidate with the median Ts). Homogeneous
+                                             # anchors are used in automated SEBAL / METRIC calibration (Allen et al. 2013;
+                                             # Bhattarai et al. 2017 - papers not available); window size is a setting
+    min_clear_pixels: 1000                   # fewer clear pixels in the window: no EF for the scene
+    sensitivity: []                          # alternative anchor rules solved per scene (EF compared in sebal_anchors.csv
+                                             # only; each rule repeats the whole energy balance). Production: none. To
+                                             # check the anchor choice, copy sensitivity_rules here and run step 00c on a
+                                             # test period (--start / --end; writes to data/_test/)
+    sensitivity_rules:
+      - {cold_ndvi_quantile: 0.98, cold_ts_quantile: 0.10, hot_ts_quantile: 0.90}   # stricter
+      - {cold_ndvi_quantile: 0.90, cold_ts_quantile: 0.30, hot_ts_quantile: 0.70}   # looser
+      - {homogeneity_window_off: true, cold_ndvi_quantile: 0.95}    # same quantiles, median-Ts candidate (v0.4.1 rule)
+  iterations: {max: 30, rah_tolerance: 0.001}   # stability iteration stops when r_ah of the hot pixel changes < 0.1 %
+                                             # (setting; Jaafar & Mourad 2021: r_ah iterated "until a stable value is reached")
+  hot_pixel:                                 # ET of the hot pixel. zero: SEBAL, LE_hot = 0 (eq. 46). soil_water_balance:
+    method: soil_water_balance               # METRIC - "a daily surface soil water balance such as that of the FAO56
+                                             # publication ... is run for a bare soil condition to confirm that ET = 0 or
+                                             # to supply a nonzero value" (Allen et al. 2007 p.387); H_hot = (Rn - G) -
+                                             # LE_hot (eq. 47). Bare-soil evaporation: FAO-56 ch. 7 (core/soil_evaporation.py)
+    ze_m: 0.10                               # depth of the evaporation layer: "Where unknown, a value for Ze ... of
+                                             # 0.10-0.15 m is recommended" (FAO-56 ch. 7); 0.10 m as in Table 19
+    rew_mm: 10                               # readily evaporable water: FAO-56 Table 19, clay and silty clay 8-12 mm
+                                             # (Dewas topsoil 37-46 % clay, SoilGrids); 10 = middle (setting)
+    kc_max: 1.2                              # FAO-56 eq. 72 with h = 0 for bare soil; Example 31: "Kc max = 1.20"
+    kcb: 0.0                                 # bare soil: "one could set the Kcb equal to zero so that maximum Ke becomes
+                                             # Ke = Kc max = 1.20" (FAO-56 Example 31)
+    few: 1.0                                 # "For rain on bare soil few = 1" (FAO-56 Example 31)
+    de_start_mm: 0.0                         # De at the first day of E3 (1 Sep, monsoon): "the topsoil is near field
+                                             # capacity following a heavy rain ... De,i-1 = 0" (FAO-56 ch. 7)
+                                             # Runoff 0 ("ROi can be assumed to be zero", FAO-56); irrigation of the bare
+                                             # field 0 (not known: setting); soil per tehsil: run config inputs.soil_units
+  terrain_datum: true                        # eq. 29 with Ts_datum: Ts adjusted to a common elevation with the DEM
+  lapse_rate_k_m: 0.0065                     # (NASADEM 30 m, mosaic in data/stac/dem/<run>/) and this lapse rate: "a1
+                                             # constant lapse rate moist air = 0.0065 [K m-1]" (FAO-56 Annex 3, eq. 3-2,
+                                             # Burman et al. 1987); the same 0.0065 as in Allen et al. 2007 eq. 5
+  ef_bounds: [0.0, 1.0]                      # EF outside 0-1 (colder than the cold / hotter than the hot pixel) is set to
+                                             # the bound: Ws = EF "vary between 0 and 1" (Yuan et al. 2007 p. 192)
+
+temperature_scalar:
+  topt: casa_ndvi_peak_month                 # Topt of Ts = T1 T2 (Potter et al. 1993 eqs. 6-7): "the air temperature in
+                                             # the month when the FAS NDVI reaches its maximum for the year" (Potter et
+                                             # al. 1993 p.816); "the mean air temperature during the month of maximum leaf
+                                             # area index or NDVI development" (Bastiaanssen & Ali 2003 p.324). Per unit:
+                                             # mean daily ERA5-Land air temperature of the calendar month of the unit's
+                                             # NDVI peak (step 03), computed in step 04 (topt_casa.csv); the same equation
+                                             # for every crop. crop_values: Topt of the crop file (ensemble values)
+
+quality_flags:                               # step 09 tehsil flags - processing settings, no literature values
+  min_clear_s2_dates: 8                      # clear Sentinel-2 dates in the run's quality window
+  max_ef_l8_l9_abs_diff: 0.10                # mean |EF L8 - EF L9| in season
+  max_heat_days: 25                          # heat days (see heat_stress) in bulking
+
+parameters:                                  # f (PAR fraction of Rs, not crop-specific); crop parameters: config/crops/<crop>.yaml
+  f_par:    {central: 0.48,  values: [0.48, 0.50],         range: [0.48, 0.50], status: verified, source: "Bastiaanssen & Ali 2003 eq. 1, p.322 (PAR = 0.48 K24); Jaafar & Mourad 2021 eq. 5, p.4 (0.48); method document p.2 (0.48-0.50 of Rs); Potter et al. 1993 eq. 2, p.816 (0.5)"}
+
+# Combined ensemble LUE-ENS (step 06): parameters x water-scalar form x season timing, product weights.
+ensemble:
+  product: LUE-ENS
+  season_weights: {0.1: 1, 0.2: 1, 0.3: 1}   # assumed equal (as the Indore timing members)
+  quantiles: [0.1, 0.5, 0.9]
+  weight_tolerance: 1.0e-9
+  spread_label: "scenario spread across documented parameter values and method choices - not a calibrated probability interval"
+
+sobol:                                        # step 07, SALib (Saltelli et al. 2010)
+  base_samples: 1024                          # N; model runs = N * (2D + 2)
+  seed: 1
+  bootstrap: 500                              # confidence intervals of the indices
+
+# Pixel stacks of step 00c (export px, core/pixels.py): storage settings, no model value. Stored as int16 =
+# value / scale (rounded), -32768 = no value; the largest rounding error is half a scale step (00d checks it).
+pixels:
+  rule: "pixel of the 10 m Sentinel-2 NDVI grid whose centre is inside the parcel; a parcel without one takes the
+    pixel of its representative point; Landsat EF, ETa and clear share of the 10 m pixel square as the field export
+    E2 computes them for a field (area-weighted over the clear 30 m pixels the square overlaps; mean of the scenes of
+    one overpass, largest clear share)"
+  ndvi_scale: 1.0e-4                          # NDVI -1 to 1
+  ef_scale: 1.0e-4                            # EF 0 to 1
+  eta_scale: 1.0e-3                           # ETa in mm per day (up to 32.767)
+  clear_scale: 1.0e-4                         # Landsat clear share of the pixel square 0 to 1 (v0.9.0)
+
+# Step 05b: the model of steps 03-05 for every pixel (vectorised). Processing settings only.
+pixel_model:
+  chunk_pixels: 10000                         # pixels modelled at a time (memory: ~0.5 GB at 10000)
+  check_pixels: 200                           # pixels also run through the field-unit code of steps 03-05 (check;
+                                              # v0.9.0: 200, was 40 - covers rarer branches of the vectorised model)
+  check_seed: 1
+  check_tolerance_t_ha: 1.0e-6                # check: |vectorised - field-unit code| of every member yield
+
+# Step 11: pixel yield map. Processing settings only.
+pixel_map:
+  chunk_pixels: 100000                        # pixels whose member statistics are computed at a time
+  yield_raster_bands: [final_t_ha, final_p10, final_p90, central_t_ha]   # yield GeoTIFF on the 10 m grid of the
+                                              # Sentinel-2 rasters: the value of each pixel (calibrated members)
+
+# Step 12: parcel-mean yield map - the field-unit model of steps 01-05 for every parcel of the crop map on its
+# area-weighted mean inputs, its values read from the stored rasters of step 00c (v0.9.0). Processing settings only.
+parcel_map:
+  chunk_parcels: 2000                         # parcels modelled at a time (memory)
+  sample_tolerance_t_ha: 0.01                 # check: sampled fields, step-12 central yield vs step 05 (rasters hold
+                                              # EF as float32, the step-00c field rows use the float64 result)
+  yield_raster_bands: [final_t_ha, final_p10, final_p90, pixel_minus_parcel_t_ha]   # GeoTIFF: parcel values burnt
+                                              # into the 10 m grid of the Sentinel-2 rasters (pixel centre inside)
+
+# Calibration (step 08): one common factor, ratio of means (Cochran 1977), as Indore step 11.
+calibration:
+  base_product: LUE-ENS                      # input_file and season: run config
+  allow_benchmark_season_mismatch: true      # placeholder only: an official yield of an earlier season
+  bootstrap: 2000                            # observed tehsil / plot yields: resampling unit = unit
+  seed: 1
+  warning_placeholder: "Workflow test using an older official district average. Not validated. Not a final yield estimate."
+  model_scope_note: "Nutrients, pests, diseases and marketable losses are not simulated; the factor absorbs them and all other model errors without identifying their causes."
+
+# Acceptance targets - frozen 2026-11-13 before any independent test; same as the Indore WOFOST framework.
+acceptance_targets:
+  frozen_on: "2026-11-13"
+  nrmse_definition: "RMSE / mean(observed) * 100"
+  district_nrmse_pct: 15
+  district_abs_bias_pct: 5
+  tehsil_nrmse_pct: 20
+  field_level: report_only
+  benchmark: "must beat the official trend / previous-year benchmark"
+
+# Step 00c: data access through STAC APIs (v0.4). Settings of the data access only - no model value.
+stac:
+  max_workers: 24                            # parallel downloads
+  retries: 4                                 # per search / granule / request, then the step stops
+  sentinel2:                                 # E1
+    api: "https://planetarycomputer.microsoft.com/api/stac/v1"
+    sign: planetary_computer                 # asset links need a short-lived token (planetary-computer package)
+    collection: sentinel-2-l2a
+    assets: {red: B04, nir: B08, scl: SCL}   # NDVI = (B8 - B4) / (B8 + B4); SCL 20 m -> 10 m nearest neighbour
+    valid_scl: [4, 5]                        # scene classification: vegetation, not vegetated (export specification)
+    metadata_asset: product-metadata         # Level-2A product metadata (MTD_MSIL2A.xml): reflectance = (DN + BOA_ADD_OFFSET)
+                                             # / BOA_QUANTIFICATION_VALUE per band (ESA SentiWiki 'S2 Products', from
+                                             # processing baseline 04.00); no offset list -> offset 0
+    reflectance_rasters: true                # storage setting: red and NIR surface reflectance per date as GeoTIFF
+                                             # (x 10000, pixels used for NDVI) next to the clear mask and NDVI rasters
+    coverage: all_parcels                    # storage setting: pixels stored and preprocessed for every parcel of the
+                                             # crop map (pixel stacks, export px; step 12 parcel-mean map); sample = the sampled fields only. E1 is
+                                             # the table of the sample either way
+  landsat:                                   # E2
+    api: "https://planetarycomputer.microsoft.com/api/stac/v1"
+    sign: planetary_computer
+    collection: landsat-c2-l2
+    platforms: {landsat-8: L8, landsat-9: L9}
+    collection_category: T1                  # Tier 1 scenes (the v3 export specification used the T1_L2 collections)
+    qa_asset: qa_pixel
+    fill_bit: 0                              # QA_PIXEL bit 0: fill (outside the scene)
+    masked_bits: [1, 2, 3, 4, 5]             # QA_PIXEL dilated cloud, cirrus, cloud, cloud shadow, snow (USGS LSDS-1619
+                                             # v6.0 Table 6-2). Cirrus added in v0.5: thin cirrus cools the surface
+                                             # temperature and raises EF; snow has no crop energy balance
+    ef_function: "core.ef_sebal:compute_ef"  # "package.module:function" -> {'ef': 0-1, 'eta': mm/day} arrays of the scene
+                                             # window (core/stac_ingest.py LandsatScene). EF = lambda E / (Rn - G) at the
+                                             # overpass (method document: SEBAL or METRIC); here SEBAL, settings: section
+                                             # sebal below. null: E2 is not written
+    context_km: 20                           # scene window given to the EF function: extent of the fields + this margin
+    download_assets: []                      # storage setting: bands stored as GeoTIFF for every scene besides qa_pixel
+                                             # and the bands the EF function reads (which are stored when they are read)
+    result_rasters: [ef, eta]                # storage setting: results of the EF function written as GeoTIFF per scene;
+                                             # also possible: rn_w_m2, g_w_m2, h_w_m2, le_w_m2
+    keep_source_bands: false                 # storage setting: false = the bands of a scene (~115 MB per scene in Dewas)
+                                             # are deleted once its results are stored (field rows, clear mask, EF and
+                                             # ETa rasters); a scene computed again downloads them again. true = kept
+  era5land:                                  # E3
+    catalogue: "https://cds.climate.copernicus.eu/api/catalogue/v1"   # STAC catalogue of the Climate Data Store
+    dataset: reanalysis-era5-land            # hourly; retrieval with cdsapi (needs a CDS account, ~/.cdsapirc)
+    variables:                               # CDS name: netCDF name
+      2m_temperature: t2m
+      2m_dewpoint_temperature: d2m
+      10m_u_component_of_wind: u10
+      10m_v_component_of_wind: v10
+      surface_pressure: sp
+      surface_solar_radiation_downwards: ssrd
+    precipitation: {total_precipitation: tp}   # own hourly files (raw_precip/): E3 precip_mm, bare-soil water balance of
+                                             # the SEBAL hot pixel (FAO-56 eq. 77)
+  dem:                                       # elev_m of E3 (FAO-56 clear-sky radiation)
+    api: "https://planetarycomputer.microsoft.com/api/stac/v1"
+    sign: planetary_computer
+    collection: nasadem                      # NASADEM (reprocessed SRTM, 1 arc-second)
+    asset: elevation
+    window_m: 1000                           # mean over a 1 km window centred on the cell centre
+
+references:
+  - "Monteith J.L. (1977) Climate and the efficiency of crop production in Britain. Phil Trans R Soc Lond B 281: 277-294."
+  - "Potter C.S. et al. (1993) Terrestrial ecosystem production: a process model based on global satellite and surface data. Global Biogeochem Cycles 7(4): 811-841 (eq. 5-8)."
+  - "Bastiaanssen W.G.M., Ali S. (2003) A new crop yield forecasting model based on satellite measurements applied across the Indus Basin, Pakistan. Agric Ecosyst Environ 94: 321-340."
+  - "Allen R.G., Tasumi M., Trezza R. (2007) Satellite-based energy balance for mapping evapotranspiration with internalized calibration (METRIC) - Model. J Irrig Drain Eng 133(4): 380-394."
+  - "Yuan W. et al. (2007) Deriving a light use efficiency model from eddy covariance flux data for predicting daily gross primary production across biomes. Agric For Meteorol 143: 189-207."
+  - "Poggio L. et al. (2021) SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty. SOIL 7: 217-240."
+  - "Munoz-Sabater J. et al. (2021) ERA5-Land: a state-of-the-art global reanalysis dataset for land applications. Earth Syst Sci Data 13: 4349-4383."
+  - "USGS (2024) Landsat 8-9 Collection 2 Level 2 Science Product Guide, LSDS-1619 v6.0."
+  - "Allen R.G. et al. (1998) Crop evapotranspiration. FAO Irrigation and Drainage Paper 56 (Table 12)."
+  - "Allen R.G., Pereira L.S. (2009) Estimating crop coefficients from fraction of ground cover and height. Irrig Sci 28: 17-34."
+  - "Carlson T.N., Ripley D.A. (1997) On the relation between NDVI, fractional vegetation cover, and leaf area index. Remote Sens Environ 62: 241-252."
+  - "Raes D. et al. (2026) AquaCrop v7.3 Reference Manual, Annex I. FAO."
+  - "Jonsson P., Eklundh L. (2004) TIMESAT. Comput Geosci 30: 833-845."
+  - "Chen J. et al. (2004) Reconstructing NDVI time-series with the Savitzky-Golay filter. Remote Sens Environ 91: 332-344."
+  - "Beck P.S.A., Atzberger C., Hogda K.A., Johansen B., Skidmore A.K. (2006) Improved monitoring of vegetation dynamics at very high latitudes: a new method using MODIS NDVI. Remote Sens Environ 100: 321-334."
+  - "Reinsch C.H. (1967) Smoothing by spline functions. Numer Math 10: 177-183."
+  - "Morozov V.A. (1966) On the solution of functional equations by the method of regularization. Soviet Math Dokl 7: 414-417."
+  - "Saltelli A. et al. (2010) Variance based sensitivity analysis of model output. Comput Phys Commun 181: 259-270."
+  - "Cochran W.G. (1977) Sampling Techniques, 3rd ed. Wiley."
+  - "Willmott C.J. (1981) On the validation of models. Phys Geogr 2: 184-194."

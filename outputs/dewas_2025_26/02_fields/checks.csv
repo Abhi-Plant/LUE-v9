@@ -1,0 +1,9 @@
+check,status,detail
+every cell with the crop has a sampled field,PASS,0 cells without a field (0.0 ha not represented)
+cells with >= 2 fields (sampling-error estimate),WARN,3 cells with fewer (2.3 ha; pooled variance used)
+design weights sum to the sampled cells' crop area,PASS,"14,918.6 ha"
+inclusion probabilities: sum of 1/pi per cell = frame size (Horvitz-Thompson count),PASS,"pi 0.0063-1.0000; 6,299 frame parcels"
+frame coverage (mapped crop area inside the sampling frame),INFO,"30 % of 14,919 ha; parcels outside the frame (mixed segments, small parcels) take their cell's ratio estimate (assumption)"
+cells are ERA5-Land grid points (0.1 deg),PASS,83 cells; spatial spread: nearest sampled neighbour median 1.1 km
+eligibility rules relaxed,INFO,"25 % of fields from cells with relaxed rules; {'none': 259, 'review;source;min_area_ha;mixed': 41, 'review;source;min_area_ha;mixed;min_prob': 32, 'review;source': 9, 'review;source;min_area_ha': 4}"
+pure parcels among sampled fields,INFO,"79 % source=parcel; frame: 6,123 eligible of 30,258 parcels"

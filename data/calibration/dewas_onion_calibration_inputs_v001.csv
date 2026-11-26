@@ -1,0 +1,2 @@
+level,unit_id,crop,season,observed_yield_t_ha,area_ha,source,status,yield_basis,units,field_id,lat,lon,plot_area_m2,harvest_date,cultivar
+district,DEWAS,onion,rabi_2024_25,30.9,17218,"MP Horticulture Dept 2024-25 2nd estimate, Dewas onion 17218 ha, 532208.38 t (annual, season not stated); 2023-24 final 30.91 t/ha (MP_Horticulture_CropWise_AllDistricts_benchmark_source.xlsx). Placeholder until crop cuts or official 2025-26 rabi yields exist",placeholder,fresh,t/ha,,,,,,

@@ -1,0 +1,2 @@
+level,unit_id,crop,season,observed_yield_t_ha,area_ha,source,status,yield_basis,units,field_id,lat,lon,plot_area_m2,harvest_date,cultivar
+district,DEWAS,potato,rabi_2017_18,19.7,,"MP Horticulture Dept first estimate 2017-18, Dewas district (as used in the AquaCrop Dewas run); DES Dewas 2016-17 19.70 and 2019-20 19.73 t/ha (Potato yield DES.xlsx). Latest verified official value found on 2026-11-13; 2023-24 / 2024-25 not published online",placeholder,fresh,t/ha,,,,,,

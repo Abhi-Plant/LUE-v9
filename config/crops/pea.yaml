@@ -1,0 +1,147 @@
+# Crop file: every crop-specific value of the framework. One file per crop (config/crops/<crop>.yaml); the run config
+# names its crop (crop: pea). config/project.yaml holds method settings only and is the same for every crop.
+# Crop: VEGETABLE (garden) pea harvested as fresh green pods - not grain pea. Calibration series: NHB / MP Dept. of
+# Horticulture "Peas" (green pods), never the DES "Peas & beans (Pulses)" dry-grain series.
+#
+# v1.0, 26 Nov 2026 - accepted. Density decision: 15.6 plants m-2 (thesis per-area yields), see parameters.eps_max.
+# Pea method (Green Pea LUE v1, v0.4.1): yield runs on the combined coefficient k = eps_max x HI / DM calibrated in
+# step 08 / 08p against the horticulture district series; eps_max, HI and DM below are the uncalibrated prior and
+# the plausibility check (implied HI = k x DM / eps_max must fall in (0, 1]).
+#
+# Every value carries a source (citation with page / table / equation) and a status:
+#   verified       value seen on the printed page of the source (PDF in references/ or official online document)
+#   verified_range the range is verified; the central value inside it is a framework choice
+#   adapted        a published value used outside the purpose it was published for (reason in the source text)
+#   not_verified   cited source not available - value not checked
+#   setting        framework choice, no literature value
+# core/config.py stops when an entry has no source or no valid status (nothing is used without a stated basis).
+
+crop:
+  name: pea
+  map_class: Pea                      # class name of the crop map (step 01 data QC) - CHECK against the existing pea mask
+  harvested_part: green pods (fresh, several pickings)
+  season_end_event: last green-pod picking
+  photosynthetic_pathway: C3
+
+# LUE parameters (ensemble values, equal weights). f (PAR fraction of Rs) is not crop-specific: config/project.yaml.
+parameters:
+  eps_max:
+    central: 1.43
+    values: [1.03, 1.43, 1.79]
+    range: [1.03, 1.79]
+    unit: "g dry matter per MJ absorbed PAR"
+    source: "Derived from Patel 2015 (MSc thesis, JNKVV Jabalpur; Krishikosh 9f3d3a41-d148-4a78-bba7-42d4dd8269d8),
+      control T1 only: garden pea cv. Arkel, sown 8 Nov 2014, irrigated 1/17/35/53 DAS; above-ground DM g/plant
+      Table 7 (20, 40, 60 DAS: 0.20, 1.47, 5.60), interval-mean LAI Table 8 (0.54, 2.08). Rs: ERA5-Land cell 23.2 N
+      80.0 E, v5 daily rule; PAR = 0.48 Rs; fIPAR = 1 - exp(-k LAI); CASA Ts (Topt = Jan 2015 mean, 16.7 degC); Ws = 1
+      (irrigated). eps_max = slope through origin of B - B20 vs cumulative Ts x intercepted PAR at 40 and 60 DAS.
+      Plant density is not stated in the thesis: 15.6 plants m-2 from Table 16 (kg/ha / g per plant; gives 9.3 t/ha
+      green pods, as MP statistics) with LAI rescaled to it -> 1.43 (k = 0.51, Kruger 1977 p.43) [central], 1.03
+      (k = 0.76, O'Connell et al. 2004); 40.7 plants m-2 from LAD/(20 LAI) Tables 8-9 -> 1.79 (k = 0.51) [upper],
+      1.40 (k = 0.76). Monte Carlo over both densities and both k: median 1.39, 95 % 0.91-1.96. Intercepted PAR from
+      LAI used per MJ absorbed PAR (same unit conversion as onion.yaml). One site, one season, 2 points; read from
+      the Krishikosh text copy (PDF download failed; Tables 3-6 sum to Table 7). Benchmark O'Connell et al. 2004:
+      1.52 +- 0.05 g per MJ intercepted PAR (field pea). Workbook: 261126- Green Pea emax from Patel 2015 JNKVV
+      (v0.3).xlsx, sheet Control_T1_final"
+    status: adapted
+  topt:                               # used only with config temperature_scalar.topt: crop_values (default: CASA)
+    central: 22.5
+    values: [15.0, 22.5, 30.0]
+    range: [15.0, 30.0]
+    unit: degC
+    source: "APSIM Classic 7.10 Model/Fieldpea.xml lines 244-245: x_ave_temp 0 / 15 / 30 / 40 degC, y_stress_photo
+      0 / 1 / 1 / 0 (RUE multiplier = 1 between 15 and 30 degC mean daily temperature; module 'under development',
+      South Australia). Central = midpoint. Used only if temperature_scalar.topt = crop_values; v5 default is the
+      CASA rule (Potter et al. 1993 p.816), which gave 16.7 degC at Jabalpur, Jan 2015"
+    status: adapted
+  hi:
+    central: 0.65
+    values: [0.58, 0.65, 0.69]
+    range: [0.58, 0.69]
+    unit: "kg green-pod DM per kg above-ground DM"
+    source: "No published green-pod HI. Derived: Patel 2015 control T1 green pod yield 59.69 g fresh per plant
+      (Table 16) x pod dry-matter fraction (Ansari et al. 2026 p.2, 5: Arkel 0.209, Komal 0.187) / above-ground DM
+      per plant (Table 7: 19.30 g at harvest, 18.12 g at 100 DAS). Central 59.69 x 0.209 / 19.30 = 0.65 (same
+      cultivar Arkel); 0.58 = 0.187 / 19.30; 0.69 = 0.209 / 18.12. Check: green-pod DM 12.5 g vs pod DM 12.28 g at
+      100 DAS (Table 6). The denominator comes from the DM-sampled plants, not from the picked plants"
+    status: adapted
+  dm:
+    central: 0.198
+    values: [0.187, 0.198, 0.209]
+    range: [0.187, 0.209]
+    unit: "kg DM per kg fresh green pod"
+    source: "Ansari et al. 2026, J Sci Ind Res 85:445, p.2: fresh green pods, moisture (wet basis, oven method per
+      ASABE) Arkel 79.12 % -> DM 0.209, Komal 81.32 % -> DM 0.187 (Table 2 p.5 gives 80.12 % for Komal -> 0.199);
+      market pods at green-mature stage, Ranchi. Central = midpoint"
+    status: verified_range
+
+# Crop coefficient - used only by the reported 'relative_et' alternative and the ETa/ETc diagnostic, never by LUE-ENS.
+# Kc = Kc_ini + (Kc_mid - Kc_ini) * Kd ; Kd = min(1, ML fc, fc^(1/(1+h))) ; fc = ((NDVI - NDVI_soil)/(NDVI_full - NDVI_soil))^2
+crop_coefficient:
+  kc_ini:
+    value: 0.5
+    source: "FAO-56 Table 12, group 'e. Legumes', Peas - Fresh: Kc ini 0.5 (online edition x0490e0b, text)"
+    status: verified
+  kc_mid:
+    value: 1.15
+    source: "FAO-56 Table 12, Peas - Fresh: Kc mid 1.15 (Kc end 1.10 not used)"
+    status: verified
+  crop_height_m:
+    value: 0.5
+    source: "FAO-56 Table 12, Peas - Fresh: maximum crop height 0.5 m"
+    status: verified
+  ml:
+    value: 2.0
+    source: "FAO-56 eq. 98 (ch. 9; form in Example 41): ML = 2. Eq. 98 runs from Kc min to Kcb full; the framework
+      applies it from Kc ini to Kc mid (adapted use, as onion.yaml)"
+    status: adapted
+  ndvi_soil:
+    value: 0.125
+    source: "Jaafar & Mourad 2021 eq. 4, p.4: 'an NDVI value of 0.125 indicates bare soil'"
+    status: verified
+  ndvi_full:
+    value: 0.85
+    source: "no pea NDVI series run yet; same value as onion.yaml; to be reset from the pea field NDVI"
+    status: setting
+
+# Season detection from NDVI (step 03)
+season:
+  min_amplitude:
+    value: 0.15
+    source: "NDVI peak minus minimum needed for a crop cycle; same as onion.yaml (no pea run yet); check against the
+      pea tehsil NDVI amplitudes of the first run"
+    status: setting
+
+# Heat-day flag (step 04): a flag only, no yield effect
+heat_stress:
+  tmax_threshold_c:
+    value: 30.0
+    source: "upper end of the RUE plateau 15-30 degC in APSIM Classic 7.10 Fieldpea.xml (y_stress_photo). The source
+      gives a mean daily temperature response, not a daily-maximum threshold"
+    status: adapted
+  bulking_start_days_after_emergence:
+    value: 39
+    source: "pod-setting start for pea: Patel 2015 Table 2 (p.48), control T1: pod initiation 43.33 DAS - seedling
+      emergence 4.33 DAS = 39 days (cv. Arkel, Jabalpur, sown 8 Nov); counted from the NDVI establishment date"
+    status: adapted
+
+# Yield conversion basis
+yield_basis:
+  biomass: "above-ground dry matter of leaves, stems, tendrils and pods, roots excluded (Patel 2015 Table 7 = sum of
+    Tables 3-6)"
+  harvest_index: "dry matter of the picked green pods / above-ground dry matter (derived, see parameters.hi)"
+  fresh_dm: "dry-matter fraction of fresh whole green pods (Ansari et al. 2026 p.2)"
+
+# Crop-specific references (method references: config/project.yaml)
+references:
+  - "Patel D. (2015) Morpho-physiological traits and productivity in garden pea (Pisum sativum L.) as influenced by various methods of potassium humate-4.5 application. MSc (Plant Physiology) thesis, JNKVV Jabalpur. Krishikosh item 9f3d3a41-d148-4a78-bba7-42d4dd8269d8 (text copy)."
+  - "Kruger N.S. (1977) The effect of plant density on leaf area index and yields of Pisum sativum L. Qld J Agric Anim Sci 34:35-52 (k = 0.51 +- 0.03, p.43)."
+  - "O'Connell M.G., O'Leary G.J., Whitfield D.M., Connor D.J. (2004) Interception of photosynthetically active radiation and radiation-use efficiency of wheat, field pea and mustard in a semi-arid environment. Field Crops Res 85:111-124 (abstract)."
+  - "Ansari M.I.A., Nayak P., Bal L.M., Sarkhel S., Choubey V., Chhaya, Mahato R.K. (2026) Performance and Economic Assessment of Green Pea Depodder. J Sci Ind Res 85(5):445-452. doi:10.56042/jsir.v85i5.21720."
+  - "APSIM Classic 7.10 r4221, Model/Fieldpea.xml (local install; RUE source in FieldPea.html: Jamieson, Wilson & Hanson 1984, Proc NZ Agron Soc)."
+  - "Munoz-Sabater J. et al. (2021) ERA5-Land. Earth Syst Sci Data 13:4349-4383."
+  - "Allen R.G. et al. (1998) FAO Irrigation and Drainage Paper 56, Table 12 (peas fresh Kc, height) and eq. 98."
+  - "Jaafar H., Mourad R. (2021) GYMEE. Remote Sens 13:773 (eq. 4, p.4)."
+
+# Calibration input expected for this crop (step 08)
+calibration_expected: {crop: pea, yield_basis: fresh, units: t/ha}

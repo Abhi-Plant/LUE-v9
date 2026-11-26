@@ -1,0 +1,64 @@
+{
+ "step": "02_fields",
+ "run_at": "2026-11-25T20:13:33",
+ "framework_version": "0.7.0",
+ "python": "3.12.7",
+ "platform": "Windows-11-10.0.26200-SP0",
+ "numpy": "2.5.4",
+ "pandas": "2.3.3",
+ "scipy": "1.18.1",
+ "SALib": "1.6.0",
+ "geopandas": "1.2.0",
+ "shapely": "2.2.0",
+ "pyproj": "3.8.0",
+ "PyYAML": "6.0.3",
+ "inputs": {
+  "crop_mask": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\data\\dewas_onion_2025_26\\onion_Dewas_rabi2025-26.gpkg",
+    "sha256": "b9a9ffa088f9d6a97f80b1f08846c457560dd439745b1a79f8a411ec2e88f7c0"
+   }
+  ],
+  "boundaries": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\data\\dewas_2025_26\\DEWAS_SUBDISTRICT_BDY.shp",
+    "sha256": "113885af759638cebf51604b4a523e2e553aa4100c27efc7d300bf6a7fb0b4e1"
+   }
+  ]
+ },
+ "outputs": {
+  "folder": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_onion_2025_26\\02_fields\\cell_strata.csv",
+    "sha256": "388e1d7f6a3ea60f7e2826c38e6ea371735ca6949466b4c08535d3aabf65f610"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_onion_2025_26\\02_fields\\checks.csv",
+    "sha256": "2dcd24ba41aed013071979cf3903353c0a36f2026d864ca0a529f6fd126962f5"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_onion_2025_26\\02_fields\\fields.csv",
+    "sha256": "788b67ad28b8f136f0771b64ef661032216f35acc4307001bc7d82ace70ec5bf"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_onion_2025_26\\02_fields\\fields.gpkg",
+    "sha256": "a6ea64ca3ef1a7f73448fdc808dafd687cf53459dd152add15a9d6c90730eacc"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_onion_2025_26\\02_fields\\sample_map.png",
+    "sha256": "0accced35dcf96fe1c1ea6bd2c3981a6d57bc548640975831c517124455e4157"
+   }
+  ]
+ },
+ "run_seconds": 7.2,
+ "peak_memory_mb": 230.9,
+ "config_files": [
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\project.yaml",
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\aoi\\dewas_onion_2025_26.yaml",
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\crops\\onion.yaml"
+ ],
+ "config_sha256": "e8e10f84265685111ad785d22be813352ded7f4ba7fc014e23c5d0ac35213fe5",
+ "seed": 20261124,
+ "utm_crs": "EPSG:32643",
+ "design": "stratified_srs"
+}

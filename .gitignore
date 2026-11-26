@@ -1,0 +1,48 @@
+# Data, results and logs are produced by the pipeline - not part of the code repository, EXCEPT the inputs and records
+# needed to rerun and audit the runs of config/aoi/ (listed below with "!").
+data/*
+outputs/*
+logs/
+
+# Run inputs (read in place by the run configs)
+!data/dewas_2025_26/
+!data/dewas_onion_2025_26/
+!data/dewas_potato_2025_26/
+!data/calibration/
+
+# Dewas 2025-26 downloads, potato and onion (step 00c exports E1, E2, E3 and the per-scene SEBAL record): steps 01-10
+# run from these
+!data/field_exports/
+data/field_exports/*
+!data/field_exports/dewas_2025_26_E1_s2_perdate.csv
+!data/field_exports/dewas_2025_26_E2_landsat_perdate.csv
+!data/field_exports/dewas_2025_26_E3_era5land_daily.csv
+!data/field_exports/dewas_onion_2025_26_E1_s2_perdate.csv
+!data/field_exports/dewas_onion_2025_26_E2_landsat_perdate.csv
+!data/field_exports/dewas_onion_2025_26_E3_era5land_daily.csv
+!data/stac/
+data/stac/*
+!data/stac/landsat/
+data/stac/landsat/*
+!data/stac/landsat/dewas_2025_26/
+data/stac/landsat/dewas_2025_26/*
+!data/stac/landsat/dewas_2025_26/sebal_anchors.csv
+!data/stac/landsat/dewas_onion_2025_26/
+data/stac/landsat/dewas_onion_2025_26/*
+!data/stac/landsat/dewas_onion_2025_26/sebal_anchors.csv
+
+# Dewas 2025-26 runs, potato and onion: every step output (results for review), including the field sample
+# (step 02; a season's sample is drawn once and kept)
+!outputs/dewas_2025_26/
+outputs/dewas_2025_26/.run.lock
+!outputs/dewas_onion_2025_26/
+outputs/dewas_onion_2025_26/.run.lock
+
+# Reference PDFs: copyrighted papers (listed with page numbers in references/README.md)
+references/*.pdf
+# Python and test caches, temporary files of atomic writes
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.part
+*.tmp.npz

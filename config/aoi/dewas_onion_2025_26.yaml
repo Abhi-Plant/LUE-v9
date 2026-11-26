@@ -1,0 +1,96 @@
+# Run config: one district and one season. Inputs are read in place, never modified (paths relative to the framework
+# folder; the Dewas onion inputs are kept in data/dewas_onion_2025_26/, the crop-independent Dewas inputs in
+# data/dewas_2025_26/); outputs go to outputs/dewas_onion_2025_26/.
+# Inputs: "241126- Onion LUE v5 framework - method, equations, sources and inputs", section 9.
+name: Dewas
+crop: onion                          # crop file config/crops/onion.yaml
+season: rabi_2025_26
+
+# Season dates of this run (read by steps 01-10)
+season_dates:
+  window: ["2025-12-01", "2026-05-31"]          # rabi onion: planted December-January, harvested March-May (Kale et al. 2022 p.128); model days
+  peak_search: ["2026-01-01", "2026-04-30"]     # setting: canopy maximum after transplanting (kharif crops excluded)
+  quality_window: ["2026-01-01", "2026-02-28"]  # setting: canopy-growth months; clear Sentinel-2 dates counted for the quality flag
+  lead_days: 91                                 # data from 1 Sep 2025 (1 Dec 2025 - 91 days): the hot-pixel bare-soil balance
+                                                # starts after the monsoon with De = 0 (FAO-56 ch. 7 stage 1), as for potato;
+                                                # with the project default (30 days) it would start on 1 Nov after a dry month
+                                                # (document section 4). Setting of this run only.
+
+calibration:
+  input_file: data/calibration/dewas_onion_calibration_inputs_v001.csv   # benchmark of this run (versioned); placeholder
+
+# Local calendar day of the daily weather E3 (step 00c): India Standard Time = UTC + 5.5 h
+local_day_utc_offset_hours: 5.5
+
+inputs:
+  boundaries: "data/dewas_2025_26/DEWAS_SUBDISTRICT_BDY.shp"   # LGD sub-district polygons of Dewas (crop-independent, as potato v5)
+  boundary_district: DEWAS
+  crop_mask: "data/dewas_onion_2025_26/onion_Dewas_rabi2025-26.gpkg"   # onion parcels (prepared copy of onion Dewas.geojson, see provenance)
+  crop_mask_layer: onion
+  crop_mask_tehsil_field: tehsil
+  era5_cell_deg: 0.1                                                     # ERA5-Land grid
+  soil_units: "data/dewas_2025_26/dewas_tehsils_soilgrids_summary.xlsx"  # SoilGrids 2.0 per tehsil (Poggio et al. 2021): topsoil water content at 33 / 1500 kPa -> SEBAL hot-pixel bare-soil water balance (crop-independent)
+  soil_units_sheet: Mean_Wide
+  soil_units_field: tehsil
+  aquacrop_tehsil: null            # optional comparison (onion AquaCrop tehsil_yield.csv): column names not yet matched
+  observed_calendar: null          # optional CSV: unit (tehsil or field_id), sowing, emergence, haulm_cutting (YYYY-MM-DD) from field logs
+
+# Registered version of every input (sha256; shapefiles: hash of the .shp/.dbf/.shx/.prj hashes). Step 01 warns when a
+# file differs.
+input_sha256:
+  boundaries: 537d825dde94ea809b1df2d73bc87712458c28b3123e224aa5f4b470c6eefe92
+  crop_mask: b9a9ffa088f9d6a97f80b1f08846c457560dd439745b1a79f8a411ec2e88f7c0
+
+# How each input was produced (project.yaml provenance.required_fields). "not documented" = to be supplied by the
+# producer; step 01 lists every undocumented item (WARN). CRS, size and file dates are read from the files by step 01.
+provenance:
+  crop_mask:
+    producer: "onion classification V1, Dewas rabi 2025-26, road-cleaned (Yield/Onion/onion Dewas.geojson, 29,894 parcels, v1_class = Onion). Prepared copy for the framework's crop-map format: crop = v1_class; area_ha = area_Onion_clean (onion area of the parcel; the parcel area is kept as parcel_area_ha); mixed = share < 0.5 (onion on less than half of the parcel); source = parcel, review = false and prob = empty for every parcel (the map has no source classes, review flag or class probability)"
+    script: not documented
+    collections: not documented
+    asset_ids: not documented
+    date_range: "rabi 2025-26"
+    band_scaling: "not applicable (vector)"
+    qa_rules: "road-cleaned parcels (road_frac); onion share per parcel (share)"
+    spatial_reduction: "not applicable (vector)"
+    export_parameters: not documented
+  boundaries:
+    producer: "LGD sub-district boundaries, Madhya Pradesh (MADHYA_PRADESH_SUBDISTRICT_BDY.shp, fingerprint 008c963a28c1a5f7...); the 10 polygons with DISTRICT = DEWAS written unchanged (same geometry, attributes and CRS) to DEWAS_SUBDISTRICT_BDY.shp - every step reads only boundary_district"
+    script: "not applicable"
+    collections: "not applicable"
+    asset_ids: "not applicable"
+    date_range: not documented
+    band_scaling: "not applicable (vector)"
+    qa_rules: "not applicable"
+    spatial_reduction: "not applicable (vector)"
+    export_parameters: "not applicable"
+
+# Field units (project.yaml units: field): per-field data for the step-02 sample fields, written by step 00c
+# (00c_download.py) from STAC APIs. Own file names: the potato exports (dewas_2025_26_*) are never touched.
+field_exports:
+  e1_s2_perdate: data/field_exports/dewas_onion_2025_26_E1_s2_perdate.csv          # field_id, date, ndvi, valid_fraction [, n_scenes, fapar_sl2p]
+  e2_landsat_perdate: data/field_exports/dewas_onion_2025_26_E2_landsat_perdate.csv # field_id, date, sensor, ef, eta_mm_day, valid_fraction
+  e3_weather_daily: data/field_exports/dewas_onion_2025_26_E3_era5land_daily.csv    # cell, date, rs_mj_m2, tmin_c, tmax_c, eto_mm
+
+# Field sample (step 02): stratified simple random sample without replacement, strata = ERA5-Land cells. Inclusion
+# probability of a frame parcel = n_h / N_h (N_h = parcels of the cell's frame). Frame = eligible parcels; in cells
+# with fewer than min_fields_per_cell eligible parcels the rules are relaxed in relax_order to build the cell's frame.
+# The onion map has no class probability, source classes or review flag: min_prob 0 and source / review are the same
+# for every parcel; mixed = onion on less than half of the parcel. The 339-field onion sample of the AquaCrop hybrid
+# test records no inclusion probabilities and is not reused (document section 9.1).
+sample:
+  design: stratified_srs
+  fields_per_cell: 5
+  min_fields_per_cell: 2                     # where the cell has that many parcels
+  seed: 20261124                             # new seed (not the potato seed)
+  eligibility: {source: [parcel], mixed: false, review: false, min_prob: 0, min_area_ha: 0.25}   # min_area_ha on the onion area
+  relax_order: [mixed, min_area_ha]          # relaxed in this order in cells without enough eligible parcels
+  relaxed_values: {source: [parcel], min_area_ha: 0.1}
+
+benchmark:
+  value_fresh_t_ha: 30.9
+  source: "MP Horticulture Dept workbook (MP_Horticulture_CropWise_AllDistricts_benchmark_source.xlsx), Dewas onion 2024-25 2nd estimate: 17,218 ha, 532,208.38 t = 30.91 t/ha; production / area = 30.91 t/ha in 2021-22 to 2024-25 and 30.61 t/ha in 2019-20 and 2020-21 (a fixed per-hectare figure; season not stated)"
+  note: "annual district figure, season not stated - placeholder only, not validation; a rabi-season district yield is needed"
+  area_ha: 17218
+  area_source: "MP Horticulture Dept 2024-25 2nd estimate, Dewas onion area (annual)"
+expected_tehsils: [Bagli, Dewas, Dewas nagar, Hatpiplya, Kannod, Khategaon, Satwas, Sonkatch, Tonk khurd, Udaynagar]

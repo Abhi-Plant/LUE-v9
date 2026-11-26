@@ -1,0 +1,116 @@
+# Crop file: every crop-specific value of the framework. One file per crop (config/crops/<crop>.yaml); the run config
+# names its crop (crop: potato). config/project.yaml holds method settings only and is the same for every crop.
+#
+# Every value carries a source (citation with page / table / equation) and a status:
+#   verified       value seen on the printed page of the source (PDF in references/ or official online document)
+#   verified_range the range is verified; the central value inside it is a framework choice
+#   adapted        a published value used outside the purpose it was published for (reason in the source text)
+#   not_verified   cited source not available - value not checked
+#   setting        framework choice, no literature value
+# core/config.py stops when an entry has no source or no valid status (nothing is used without a stated basis).
+
+crop:
+  name: potato
+  map_class: Potato                   # class name of the crop map (step 01 data QC)
+  harvested_part: tuber
+  season_end_event: haulm cutting     # name of the season end detected from NDVI (step 03)
+  photosynthetic_pathway: C3
+
+# LUE parameters (ensemble values, equal weights). f (PAR fraction of Rs) is not crop-specific: config/project.yaml.
+parameters:
+  eps_max:
+    central: 2.65
+    values: [1.8, 2.65, 3.5]
+    range: [1.8, 3.5]
+    unit: "g dry matter per MJ absorbed PAR"
+    source: "Kooman 1995 Table 3.1, p.41: LUE 1.8-3.5 g MJ-1 of Dutch field trials 1968-1973, per MJ INTERCEPTED PAR,
+      fitted to total biomass (p.37); method document p.2 (1.8-3.5, 'calibrate locally'). Central 2.65 = midpoint.
+      Uncalibrated prior: Bastiaanssen & Ali 2003 calibrated eps' against district statistics within literature
+      ranges (p.330, Table 2)"
+    status: verified_range
+  topt:                               # used only with config temperature_scalar.topt: crop_values (default: CASA)
+    central: 19.5
+    values: [18.0, 19.5, 21.0]
+    range: [18.0, 21.0]
+    unit: degC
+    source: "Method document p.2: Ts = 1 near 18-21 degC. Kooman 1995 p.86: optimum 18 degC (Van Heemst 1986) or
+      21 degC (Sands et al. 1979) for dry-matter allocation to tubers. In CASA (Potter et al. 1993 p.816) and
+      Bastiaanssen & Ali 2003 (p.324) Topt is the mean air temperature of the month of maximum NDVI / LAI"
+    status: adapted
+  hi:
+    central: 0.80
+    values: [0.70, 0.80, 0.85]
+    range: [0.70, 0.85]
+    unit: "kg tuber DM per kg total DM"
+    source: "AquaCrop v7.3 Reference Manual Annex I p.13: reference harvest index HIo 70-85 % (potato). Kooman 1995
+      p.61: 0.51-0.85 measured; p.102: 'about 0.75'. Method document p.2: ~0.8. Central 0.80: framework choice"
+    status: verified_range
+  dm:
+    central: 0.225
+    values: [0.20, 0.225, 0.25]
+    range: [0.20, 0.25]
+    unit: "kg DM per kg fresh tuber"
+    source: "AquaCrop v7.3 Reference Manual Annex I p.13: 'A general conversion factor of 20% to 25%, in terms of kg
+      of dry matter per kg fresh weight, may be used'. Central = midpoint"
+    status: verified_range
+
+# Crop coefficient - used only by the reported 'relative_et' alternative and the ETa/ETc diagnostic, never by LUE-ENS.
+# Kc = Kc_ini + (Kc_mid - Kc_ini) * Kd ; Kd = min(1, ML fc, fc^(1/(1+h))) ; fc = ((NDVI - NDVI_soil)/(NDVI_full - NDVI_soil))^2
+crop_coefficient:
+  kc_ini:
+    value: 0.50
+    source: "FAO-56 Table 12, potato (the Kc ini cell of the online edition is an image and could not be read)"
+    status: not_verified
+  kc_mid:
+    value: 1.15
+    source: "FAO-56 Table 12, potato: Kc mid 1.15"
+    status: verified
+  crop_height_m:
+    value: 0.6
+    source: "FAO-56 Table 12, potato: maximum crop height 0.6 m"
+    status: verified
+  ml:
+    value: 1.5
+    source: "Allen & Pereira 2009 (Irrig Sci 28:17-34), range 1.5-2.0 - paper not available"
+    status: not_verified
+  ndvi_soil:
+    value: 0.15
+    source: "below the pre-season NDVI minimum of the Dewas tehsil series (0.16-0.28)"
+    status: setting
+  ndvi_full:
+    value: 0.85
+    source: "above the canopy NDVI maximum of the Dewas tehsil series (0.77-0.82)"
+    status: setting
+
+# Season detection from NDVI (step 03)
+season:
+  min_amplitude:
+    value: 0.15
+    source: "NDVI peak minus minimum needed for a crop cycle (potato canopy NDVI ~0.5-0.6 in the Dewas series)"
+    status: setting
+
+# Heat-day flag (step 04): a flag only, no yield effect
+heat_stress:
+  tmax_threshold_c:
+    value: 30.0
+    source: "no literature value"
+    status: setting
+  bulking_start_days_after_emergence:
+    value: 30
+    source: "no literature value"
+    status: setting
+
+# Yield conversion basis (Kooman 1995): eps_max is fitted to total dry matter; HI = tuber DM / total DM.
+yield_basis:
+  biomass: "total dry matter of leaves, stems and tubers, roots excluded (Kooman 1995 ch. 3)"
+  harvest_index: "tuber dry matter / total dry matter excluding roots (Kooman 1995 Eq. 2.12)"
+  fresh_dm: "tuber dry-matter fraction of fresh tubers (AquaCrop v7.3 Annex I p.13: 0.20-0.25)"
+
+# Crop-specific references (method references: config/project.yaml)
+references:
+  - "Kooman P.L. (1995) Yielding ability of potato crops as influenced by temperature and daylength. PhD thesis, Wageningen."
+  - "Raes D. et al. AquaCrop v7.3 Reference Manual, Annex I: crop parameters (potato, p.13). FAO."
+  - "Allen R.G. et al. (1998) FAO Irrigation and Drainage Paper 56, Table 12 (potato Kc, height)."
+
+# Calibration input expected for this crop (step 08)
+calibration_expected: {crop: potato, yield_basis: fresh, units: t/ha}

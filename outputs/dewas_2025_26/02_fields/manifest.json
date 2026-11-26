@@ -1,0 +1,64 @@
+{
+ "step": "02_fields",
+ "run_at": "2026-11-25T16:17:39",
+ "framework_version": "0.7.0",
+ "python": "3.12.7",
+ "platform": "Windows-11-10.0.26200-SP0",
+ "numpy": "2.5.4",
+ "pandas": "2.3.3",
+ "scipy": "1.18.1",
+ "SALib": "1.6.0",
+ "geopandas": "1.2.0",
+ "shapely": "2.2.0",
+ "pyproj": "3.8.0",
+ "PyYAML": "6.0.3",
+ "inputs": {
+  "crop_mask": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\data\\dewas_2025_26\\Dewas_Rabi2025-26_Model1_Potato_map (1).gpkg",
+    "sha256": "109ff4d3b0417c457331035b08c2df143d51f7fbf474c88b3ebc22b1408ce2ac"
+   }
+  ],
+  "boundaries": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\data\\dewas_2025_26\\DEWAS_SUBDISTRICT_BDY.shp",
+    "sha256": "113885af759638cebf51604b4a523e2e553aa4100c27efc7d300bf6a7fb0b4e1"
+   }
+  ]
+ },
+ "outputs": {
+  "folder": [
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_2025_26\\02_fields\\cell_strata.csv",
+    "sha256": "77488f5b768c979bf361cb205d375642aef498aaf9256b36c9d899e85ff01f66"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_2025_26\\02_fields\\checks.csv",
+    "sha256": "50e09a97b80f96a3059b56a1c8cb1ad1383d694b74b3efb17503dc9c0c526bf0"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_2025_26\\02_fields\\fields.csv",
+    "sha256": "1941135d07074b395151e8b32cb49feaf733e75560b73f393a3cbf93be06c584"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_2025_26\\02_fields\\fields.gpkg",
+    "sha256": "280fde4e8e866d97b1ba746272ff75b4d48f4b5e238f55a4287197c07d0fc2a8"
+   },
+   {
+    "path": "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\outputs\\dewas_2025_26\\02_fields\\sample_map.png",
+    "sha256": "f077fb23fd8114dd6110cae39bc1d1876505df58f1577586a1700625bf1aa526"
+   }
+  ]
+ },
+ "run_seconds": 4.3,
+ "peak_memory_mb": 316.9,
+ "config_files": [
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\project.yaml",
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\aoi\\dewas_2025_26.yaml",
+  "C:\\Work\\Pilots\\MP Horti\\Yield\\WOFOST\\LUE based\\LUE_Yield_Framework_v7\\config\\crops\\potato.yaml"
+ ],
+ "config_sha256": "3f5b766f5dee14ac87c700cc9ed6346cd07004fc8309f9469db06e69bbc245c0",
+ "seed": 20261113,
+ "utm_crs": "EPSG:32643",
+ "design": "stratified_srs"
+}

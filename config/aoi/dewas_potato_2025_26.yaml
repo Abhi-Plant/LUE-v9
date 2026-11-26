@@ -1,0 +1,28 @@
+# Run config written by step 00a (00a_parameters.py) on 2026-11-20 for the area data/dewas_potato_2025_26/Dewas- Potato.geojson.
+# The units of this run are NOT crop fields but the parts of the area inside each ERA5-Land cell, all land cover
+# (step 00b). No crop map or tehsil boundaries are registered: steps 01-10 cannot be run for it.
+name: Dewas- Potato
+crop: potato                         # crop file config/crops/potato.yaml
+season: rabi_2025_26
+
+# Season dates as answered in step 00a (the values in [brackets] there are those of the Dewas 2025-26 run)
+season_dates:
+  window: ["2025-10-01", "2026-03-31"]            # model days
+  peak_search: ["2025-11-01", "2026-02-28"]       # canopy maximum searched here
+  quality_window: ["2025-12-01", "2026-01-31"]    # clear Sentinel-2 dates counted here for the quality flag
+
+calibration:
+  input_file: data/calibration/dewas_potato_2025_26_calibration_inputs_NOT_PROVIDED.csv   # no file exists: none was given in step 00a
+
+# Local calendar day of the daily weather E3 (step 00c): UTC + this many hours
+local_day_utc_offset_hours: 5.5
+
+inputs:
+  boundary_file: "data/dewas_potato_2025_26/Dewas- Potato.geojson"       # polygon file of the area, read in place
+  era5_cell_deg: 0.1                # ERA5-Land grid
+
+# Exports of step 00c (00c_download.py) for the step-00b units
+field_exports:
+  e1_s2_perdate: data/field_exports/dewas_potato_2025_26_E1_s2_perdate.csv          # field_id, date, ndvi, valid_fraction, n_scenes
+  e2_landsat_perdate: data/field_exports/dewas_potato_2025_26_E2_landsat_perdate.csv # field_id, date, sensor, ef, eta_mm_day, valid_fraction
+  e3_weather_daily: data/field_exports/dewas_potato_2025_26_E3_era5land_daily.csv    # cell, date, rs_mj_m2, tmin_c, tmax_c, tdew_c, u10_ms, sp_kpa, elev_m, lat

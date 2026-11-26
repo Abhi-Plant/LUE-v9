@@ -1,0 +1,130 @@
+# Run config: one district and one season. Copy this file to config/aoi/<district>_<season>.yaml for another district or
+# season and run every step with --run <district>_<season>. Inputs are read in place, never modified (paths relative to
+# the framework folder; the Dewas inputs are kept in data/dewas_2025_26/); outputs go to outputs/<district>_<season>/.
+name: Dewas
+crop: potato                         # crop file config/crops/potato.yaml
+season: rabi_2025_26
+
+# Season dates of this run (read by steps 01-10)
+season_dates:
+  window: ["2025-10-01", "2026-03-31"]          # crop season Oct-Mar (method document p.1); model days
+  peak_search: ["2025-11-01", "2026-02-28"]     # canopy maximum searched here (kharif crop before October excluded)
+  quality_window: ["2025-12-01", "2026-01-31"]  # clear Sentinel-2 dates counted here for the quality flag (peak canopy months)
+
+calibration:
+  input_file: data/calibration/calibration_inputs_v001.csv   # benchmark or observed yields of this run (versioned)
+
+# Local calendar day of the daily weather E3 (step 00c): India Standard Time = UTC + 5.5 h
+local_day_utc_offset_hours: 5.5
+
+inputs:
+  # Tehsil units only (not used by field units; step 00c does not make these three): period_table (16-day tehsil
+  # table - the v0.3.2 table was a Google Earth Engine export and is not registered in v0.4), ndvi_perdate, weather_daily
+  # period_table: "<16-day tehsil table>.csv"
+  # period_table_sha256: "<sha256 of the registered table>"
+  ndvi_perdate: "data/dewas_2025_26/Dewas_S2_NDVI_potato_core_perdate_2025_26.csv"   # Sentinel-2 NDVI per date, potato core mask
+  weather_daily: "data/dewas_2025_26/Dewas_weather_2025_26.xlsx"                     # sheet ETo_inputs: daily Tmin, Tmax, Rs, ETo per tehsil
+  weather_sheet: ETo_inputs
+  boundaries: "data/dewas_2025_26/DEWAS_SUBDISTRICT_BDY.shp"   # LGD sub-district polygons of Dewas (extract, see provenance)
+  boundary_district: DEWAS
+  crop_mask: "data/dewas_2025_26/Dewas_Rabi2025-26_Model1_Potato_map (1).gpkg"    # potato parcels
+  crop_mask_layer: potato
+  crop_mask_tehsil_field: tehsil_en
+  era5_cell_deg: 0.1                                                                              # ERA5-Land grid
+  soil_units: "data/dewas_2025_26/dewas_tehsils_soilgrids_summary.xlsx"   # SoilGrids 2.0 per tehsil (Poggio et al. 2021): topsoil water content at 33 / 1500 kPa -> SEBAL hot-pixel bare-soil water balance
+  soil_units_sheet: Mean_Wide
+  soil_units_field: tehsil
+  aquacrop_tehsil: "data/dewas_2025_26/aquacrop_calibrated_yield_tehsil.csv"   # comparison only, never merged
+  observed_calendar: null          # optional CSV: unit (tehsil or field_id), sowing, emergence, haulm_cutting (YYYY-MM-DD) from field logs
+
+# Registered version of every input (sha256; shapefiles: hash of the .shp/.dbf/.shx/.prj hashes). Step 01 warns when a
+# file differs.
+input_sha256:
+  ndvi_perdate: 4fcbcb4aafb1adc07d345b49ec093cd9a38cdd5adc3b46932fc0cbc9e56cb979
+  weather_daily: 74ad9460e1ef66afba36d06acd18a7da039f0211a5078e74728e1a3204ed730d
+  boundaries: 537d825dde94ea809b1df2d73bc87712458c28b3123e224aa5f4b470c6eefe92
+  crop_mask: 109ff4d3b0417c457331035b08c2df143d51f7fbf474c88b3ebc22b1408ce2ac
+  aquacrop_tehsil: 175f74bf036deccfc549c33082903bd09c6d8172ed88703638c97addd8fa3e07
+
+# How each input was produced (project.yaml provenance.required_fields). "not documented" = to be supplied by the
+# producer; step 01 lists every undocumented item (WARN). CRS, size and file dates are read from the files by step 01.
+provenance:
+  ndvi_perdate:
+    producer: "Google Earth Engine export (AquaCrop Dewas work)"
+    script: not documented
+    collections: "Sentinel-2 L2A (columns mean, count, potato_px, n_scenes)"
+    asset_ids: not documented
+    date_range: "per acquisition date, Sep 2025 - Mar 2026"
+    band_scaling: not documented
+    qa_rules: "not documented (count = clear potato pixels, potato_px = all potato pixels of the core mask)"
+    spatial_reduction: "mean NDVI over the clear pixels of the potato core mask per tehsil"
+    export_parameters: not documented
+  weather_daily:
+    producer: "AquaCrop Dewas weather workbook"
+    script: not documented
+    collections: "ERA5-Land daily Tmin, Tmax, Rs; FAO-56 ETo"
+    asset_ids: not documented
+    date_range: "daily, rabi 2025-26"
+    band_scaling: "units in the column names (MJ, C, mm)"
+    qa_rules: not documented
+    spatial_reduction: not documented
+    export_parameters: not documented
+  crop_mask:
+    producer: "potato classification Model 1, rabi 2025-26 (file name)"
+    script: not documented
+    collections: not documented
+    asset_ids: not documented
+    date_range: "rabi 2025-26"
+    band_scaling: "not applicable (vector)"
+    qa_rules: "attributes source, prob, review, mixed per parcel"
+    spatial_reduction: "not applicable (vector)"
+    export_parameters: not documented
+  boundaries:
+    producer: "LGD sub-district boundaries, Madhya Pradesh (MADHYA_PRADESH_SUBDISTRICT_BDY.shp, fingerprint 008c963a28c1a5f7...); the 10 polygons with DISTRICT = DEWAS written unchanged (same geometry, attributes and CRS) to DEWAS_SUBDISTRICT_BDY.shp - every step reads only boundary_district"
+    script: "not applicable"
+    collections: "not applicable"
+    asset_ids: "not applicable"
+    date_range: not documented
+    band_scaling: "not applicable (vector)"
+    qa_rules: "not applicable"
+    spatial_reduction: "not applicable (vector)"
+    export_parameters: "not applicable"
+  aquacrop_tehsil:
+    producer: "AquaCrop Dewas potato run, calibrated tehsil yields (comparison only)"
+    script: "Aquacrop/Dewas- Potato/AquaCrop_Model"
+    collections: "not applicable"
+    asset_ids: "not applicable"
+    date_range: "rabi 2025-26"
+    band_scaling: "t/ha"
+    qa_rules: "not applicable"
+    spatial_reduction: "tehsil"
+    export_parameters: "not applicable"
+
+# Field units (project.yaml units: field): per-field data for the step-02 sample fields, written by step 00c
+# (00c_download.py) from STAC APIs (README "Field exports").
+field_exports:
+  e1_s2_perdate: data/field_exports/dewas_2025_26_E1_s2_perdate.csv          # field_id, date, ndvi, valid_fraction [, n_scenes, fapar_sl2p]
+  e2_landsat_perdate: data/field_exports/dewas_2025_26_E2_landsat_perdate.csv # field_id, date, sensor, ef, eta_mm_day, valid_fraction
+  e3_weather_daily: data/field_exports/dewas_2025_26_E3_era5land_daily.csv    # cell, date, rs_mj_m2, tmin_c, tmax_c, eto_mm
+                                                                               # (or tdew_c, u10_ms, sp_kpa, elev_m, lat -> FAO-56 ETo)
+
+# Field sample (step 02): stratified simple random sample without replacement, strata = ERA5-Land cells. Inclusion
+# probability of a frame parcel = n_h / N_h (N_h = parcels of the cell's frame). Frame = eligible parcels; in cells
+# with fewer than min_fields_per_cell eligible parcels the rules are relaxed in relax_order to build the cell's frame.
+sample:
+  design: stratified_srs
+  fields_per_cell: 5
+  min_fields_per_cell: 2                     # where the cell has that many parcels
+  seed: 20261113
+  eligibility: {source: [parcel], mixed: false, review: false, min_prob: 0.5, min_area_ha: 0.25}
+  relax_order: [review, source, min_area_ha, mixed, min_prob]   # relaxed in this order in cells without enough eligible parcels
+  relaxed_values: {source: [parcel, unparcelled_cropland, mixed_parcel_segment, mixed_parcel_edge], min_area_ha: 0.1}
+
+benchmark:
+  value_fresh_t_ha: 19.7
+  source: "MP Horticulture Dept first estimate 2017-18, Dewas district (as used in the AquaCrop Dewas run); DES 2016-17 19.70 and 2019-20 19.73 t/ha"
+  note: "older season, district level - plausibility reference only, not validation"
+  area_ha: 9981
+  area_source: "DES 2019-20, Dewas district potato area (latest year in Potato yield DES.xlsx)"
+  newer_official_data: "DES Crops APY (data.desagri.gov.in) has district potato to 2022-23 - to be downloaded; 2023-24 / 2024-25 not published online"
+expected_tehsils: [Bagli, Dewas, Dewas nagar, Hatpiplya, Kannod, Khategaon, Satwas, Sonkatch, Tonk khurd, Udaynagar]
